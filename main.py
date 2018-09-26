@@ -7,6 +7,7 @@ import pickle
 from subprocess import check_output 
 from sys import platform
 import imp
+import getpass
 
 #To allow either Windows or Raspbian, we'll test to make sure the modules required are found first.
 try:
@@ -27,11 +28,11 @@ elif platform == "win32":
 
 port = 5995
 
-hashKey = hashlib.sha1("password".encode("utf-8")).hexdigest()  #we can modify this later
 frame = None
 exitFlag = 0
 frameCaptureFailed = 0
 threads = []
+faceRect = None
 
 class CaptureImage(threading.Thread):
     '''Will run in a thread to capture images from the camera'''
@@ -158,6 +159,7 @@ class FaceDetect(threading.Thread):
     def run(self):
         global frame
         global exitFlag
+        global faceRect
         
         print("Starting face detection")
 
@@ -166,11 +168,6 @@ class FaceDetect(threading.Thread):
             if frame is not None:
                 faces, faceRect = self.DetectFaces(face_cascade, frame)
  
-                #Draw a rectangle around every found face
-                threadLock.acquire(1)
-                for (x,y,w,h) in faceRect:
-                    cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
-                threadLock.release()
 
 # So we can gain access to the frame object and not have issues writing to it and reading at the same time
 threadLock = threading.Lock()
@@ -189,10 +186,17 @@ faceDect = FaceDetect("Face Detection")
 faceDect.start()
 
 # We can include something to allow changing the password on startup
+password = getpass.getpass("Please enter server password: ")
+hashKey = hashlib.sha256(password.encode("utf-8")).hexdigest()  #we can modify this later
 
 while True:
     try:
         if frame is not None:
+            if faceRect is not None:
+                #Draw a rectangle around every found face
+                for (x,y,w,h) in faceRect:
+                    cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+                    
             cv2.imshow("Server View", frame)
 
         key = cv2.waitKey(1)
