@@ -13,6 +13,7 @@ drawFrame = None
 serverFailed = 0
 debugFrame = None
 frameContours = None
+faceRect = None
 
 def main():
     host = "fe80::68ca:9fc0:3f3f:8392%20"
@@ -93,7 +94,7 @@ class FrameReceiverClient(threading.Thread):
 
         conn.close()
 
-class ProcessFrame(threading.Thread):
+class MotionDetection(threading.Thread):
     def __init__(self, name):
         threading.Thread.__init__(self)
         self.name = name
@@ -138,6 +139,28 @@ class ProcessFrame(threading.Thread):
                 print(ex)
                 break
 
+class FaceDetect(threading.Thread):
+    def __init__(self, name):
+        threading.Thread.__init__(self)
+        self.name = name
+
+    def DetectFaces(self, faceCascade, frame):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+        faceRect = faceCascade.detectMultiScale(gray, scaleFactor = 1.1, minNeighbors = 10)
+        return [gray[y:y+w, x:x+h] for (x,y,w,h) in faceRect], faceRect
+
+    def run(self):
+        global frame
+        global exitFlag
+        global faceRect
+        
+        print("Starting face detection")
+
+        face_cascade = cv2.CascadeClassifier('./haarcascades/haarcascade_frontalface_alt.xml')
+        while exitFlag == 0:
+            if frame is not None:
+                faces, faceRect = self.DetectFaces(face_cascade, frame)
+ 
 
 main()
 
@@ -146,12 +169,22 @@ threadLock = threading.Lock()
 frameThread = FrameReceiverClient("inFrames")
 frameThread.start()
 
-frameProcessor = ProcessFrame("frameProcessor")
-frameProcessor.start()
+motionDect = MotionDetection("motionDetection")
+motionDect.start()
+
+# Start detecting faces in those frame
+faceDect = FaceDetect("Face Detection")
+faceDect.start()
 
 while True:
     #Draw the contours
     if frameContours is not None:
+
+        if faceRect is not None:
+            #Draw a rectangle around every found face
+            for (x,y,w,h) in faceRect:
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+
         for c in frameContours:
             if cv2.contourArea(c) < 700:
                 continue
@@ -178,4 +211,5 @@ while True:
 exitFlag = 1
 
 frameThread.join()
-frameProcessor.join()
+motionDect.join()
+faceDect.join()
