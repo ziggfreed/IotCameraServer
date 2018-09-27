@@ -15,12 +15,12 @@ debugFrame = None
 frameContours = None
 
 def main():
-    host = "192.168.2.2"
+    host = "fe80::68ca:9fc0:3f3f:8392%20"
     port = 5995
 
     password = getpass.getpass("Please enter password: ")
 
-    clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    clientSocket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
     message = hashlib.sha256(password.encode("utf-8")).hexdigest()
 
     # clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -37,10 +37,9 @@ class FrameReceiverClient(threading.Thread):
         global exitFlag
         global serverFailed
 
-        recSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        recSocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 
-        serverHost = socket.gethostbyname(socket.gethostname())
-        serverHost = "192.168.2.3"
+        serverHost = "fe80::68ca:9fc0:3f3f:8392%20"
         serverPort = 5996
 
         print("Binding to address: ", serverHost)

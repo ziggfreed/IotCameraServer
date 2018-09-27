@@ -19,13 +19,15 @@ try:
 except ImportError:
     piCameraFound = False
 
+#Old IPV4 stuff
+# # need a reliable way to get the current host address to bind to
+# if platform == "linux" or platform == "linux2":
+#     host = check_output(['hostname', '-I']) #need to get the wlan0 host IP otherwise it returns 127.0.0.1
+# elif platform == "win32":
+#     host = socket.gethostbyname(socket.gethostname())
 
-# need a reliable way to get the current host address to bind to
-if platform == "linux" or platform == "linux2":
-    host = check_output(['hostname', '-I']) #need to get the wlan0 host IP otherwise it returns 127.0.0.1
-elif platform == "win32":
-    host = socket.gethostbyname(socket.gethostname())
-
+# IPV6 address
+host = "fe80::68ca:9fc0:3f3f:8392%20"
 port = 5995
 
 frame = None
@@ -99,8 +101,8 @@ class StartFrameServer(threading.Thread):
         global frame
         global exitFlag
 
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        serverSocket.connect((self.addr[0], 5996))
+        serverSocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        serverSocket.connect((self.addr[0], 5996, 0, 0))
         while exitFlag == 0: 
             # pickle is a serialiser -> encodes it as bytes for sending over the network
             data = pickle.dumps(frame, protocol=2)
@@ -134,7 +136,7 @@ class StartServer(threading.Thread):
     def run(self):
         global frame
         global exitFlag
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        serverSocket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         serverSocket.settimeout(1.0)
         serverSocket.bind((self.host, self.port))
 

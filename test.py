@@ -1,11 +1,12 @@
-import imp
+from netifaces import interfaces, ifaddresses, AF_INET6
+from sys import platform
+from subprocess import check_output 
 
-try:
-    imp.find_module('picamera')
-    imp.find_module('picamera.array')
-    from picamera.array import PiRGBArray
-    from picamera import PiCamera
-except ImportError:
-    found = False
+def ip4_addresses():
+    ip_list = []
+    for interface in interfaces():
+        for link in ifaddresses(interface)[AF_INET6]:
+            ip_list.append(link['addr'])
+    return ip_list
 
-print(found)
+print(ip4_addresses())
