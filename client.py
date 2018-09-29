@@ -5,6 +5,7 @@ import threading
 import pickle
 import time
 import getpass
+import commonCrypto
 
 exitFlag = 0
 
@@ -15,7 +16,14 @@ debugFrame = None
 frameContours = None
 faceRect = None
 
+# Crypto Stuff
+privateKey, publicKey = commonCrypto.generate_keys_RSA()
+assymetricKey = None
+
 def main():
+    global privateKey
+    global assymetricKey
+
     host = "fe80::68ca:9fc0:3f3f:8392%20"
     port = 5995
 
@@ -26,6 +34,21 @@ def main():
 
     # clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     clientSocket.sendto(message.encode(), (host, port))
+
+    #send the public key
+    keyEncoded = publicKey.export_key(format="PEM")
+    clientSocket.sendto(keyEncoded, (host, port))
+
+    #So we don't endlessly loop
+    clientSocket.settimeout(10)
+    # read the sent message back
+    dataRec = clientSocket.recv(2048)
+
+    assymetricKey = commonCrypto.decrypt_message_RSA(dataRec, privateKey)
+
+    #debug only!
+    print(assymetricKey)
+
 
 class FrameReceiverClient(threading.Thread):
     '''Gets those frames being sent down'''
@@ -65,6 +88,11 @@ class FrameReceiverClient(threading.Thread):
                 messageType = conn.recv(5)  #what we're sending. Usually its just "Frame"
                 equalSign = conn.recv(1)    #The = sign
                 messageLength = int(conn.recv(8).decode("utf-8"))
+                
+                #AES stuff
+                tag = conn.recv(16)
+                nonce = conn.recv(16)
+
                 # Don't always get a full frame in one read, might need to loop a few to ensure we get the full payload
                 byteFrame = conn.recv(messageLength)
                 while (len(byteFrame) < messageLength):
@@ -73,8 +101,11 @@ class FrameReceiverClient(threading.Thread):
                     byteFrame += newRead
 
                 try:
+                    #decode the frame
+                    frameDecoded = commonCrypto.decrypt_message_AES(byteFrame, assymetricKey, nonce, tag)
+
                     #deserialise the frame from bytes
-                    tempFrame = pickle.loads(byteFrame, encoding="bytes")
+                    tempFrame = pickle.loads(frameDecoded, encoding="bytes")
 
                     threadLock.acquire(1)
                     frame = tempFrame

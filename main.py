@@ -9,6 +9,9 @@ from sys import platform
 import imp
 import getpass
 
+# out custom crypto file
+import commonCrypto
+
 #To allow either Windows or Raspbian, we'll test to make sure the modules required are found first.
 try:
     imp.find_module('picamera')
@@ -35,6 +38,12 @@ exitFlag = 0
 frameCaptureFailed = 0
 threads = []
 faceRect = None
+
+# crypto stuff
+symmetricKey = commonCrypto.generate_key_AES()
+
+# What we receive from the client
+clientPublicKey = None
 
 class CaptureImage(threading.Thread):
     '''Will run in a thread to capture images from the camera'''
@@ -100,16 +109,20 @@ class StartFrameServer(threading.Thread):
     def run(self):
         global frame
         global exitFlag
+        global symmetricKey
 
+        time.sleep(1) #just sleep a bit while we exchange keys etc
         serverSocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         serverSocket.connect((self.addr[0], 5996, 0, 0))
         while exitFlag == 0: 
             # pickle is a serialiser -> encodes it as bytes for sending over the network
-            data = pickle.dumps(frame, protocol=2)
+            frameBytes = pickle.dumps(frame, protocol=2)
+            data, tag, nonce = commonCrypto.encrypt_message_AES(frameBytes, symmetricKey)
             frameLength = str(len(data))
             message = ("Frame=" + frameLength.zfill(8)).encode("utf-8")
             #serverSocket.send(message)
-            serverSocket.sendall(message + data)
+            # since tag and nonce are 16 bytes long, we can chop them up on the other side correctly
+            serverSocket.sendall(message + tag + nonce + data)
             time.sleep(0.1)
 
 class StartServer(threading.Thread):
@@ -130,21 +143,38 @@ class StartServer(threading.Thread):
                 frameServer = StartFrameServer("frameServer", addr)
                 frameServer.start()
                 threads.append(frameServer)
+                return True
             else:
                 print("Invalid token!")
+                return False
 
     def run(self):
         global frame
         global exitFlag
+        global clientPublicKey
+        global symmetricKey
+
         serverSocket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         serverSocket.settimeout(1.0)
         serverSocket.bind((self.host, self.port))
 
         while exitFlag == 0:
             try:
-                data, addr = serverSocket.recvfrom(1024)
+                #Since its SHA256, its always 64 bits
+                data, addr = serverSocket.recvfrom(64)
                 print("Connected to: ", addr)
-                self.handleData(data.decode(), addr)
+                if self.handleData(data.decode(), addr):
+                    # the correct password, get their public key!
+                    encodedPublicKey = serverSocket.recv(2048)
+                    clientPublicKey = commonCrypto.import_key_RSA(encodedPublicKey, None)
+
+                    #  so send Symmetric key encrypted with their public key
+                    encyrptedMessage = commonCrypto.encrypt_message_RSA(symmetricKey, clientPublicKey)
+                    print(len(encyrptedMessage))
+                    serverSocket.sendto(encyrptedMessage, (addr))
+
+                    #debug only!
+                    print(symmetricKey)
             except socket.timeout:
                 pass
 
@@ -184,8 +214,8 @@ capImage = CaptureImage("ImageCapture")
 capImage.start()
 
 # Start detecting faces in those frame
+startedFaceDectection = False
 faceDect = FaceDetect("Face Detection")
-faceDect.start()
 
 # We can include something to allow changing the password on startup
 password = getpass.getpass("Please enter server password: ")
@@ -194,6 +224,12 @@ hashKey = hashlib.sha256(password.encode("utf-8")).hexdigest()  #we can modify t
 while True:
     try:
         if frame is not None:
+
+            # We'll only do face detection if we've started getting frames!
+            if not startedFaceDectection:
+                faceDect.start()
+                startedFaceDectection = True
+
             if faceRect is not None:
                 #Draw a rectangle around every found face
                 for (x,y,w,h) in faceRect:

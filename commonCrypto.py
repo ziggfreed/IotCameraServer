@@ -15,33 +15,37 @@ def generate_keys_RSA():
 	publickey = privatekey.publickey()
 	return privatekey, publickey
 
-def encrypt_message_RSA(a_message , publickey):
+def encrypt_message_RSA(byteMessage , publickey):
 	encryptor = PKCS1_OAEP.new(publickey)
-	encrypted_msg = encryptor.encrypt(a_message.encode("utf-8"))
+	encrypted_msg = encryptor.encrypt(byteMessage)
+
 	return encrypted_msg
 
 def decrypt_message_RSA(encrypted_msg, privatekey):
 	decryptor = PKCS1_OAEP.new(privatekey)
 	decrypted_msg = decryptor.decrypt(encrypted_msg)
-	return decrypted_msg.decode("utf-8")
+	return decrypted_msg
 
 def generate_key_AES():
 	key = get_random_bytes(16)
 	return key
 
-def encrypt_message_AES(a_message, key):
+def encrypt_message_AES(byteMessage, key):
 	encryptor = AES.new(key, AES.MODE_EAX)
-	cipherText, tag = encryptor.encrypt_and_digest(a_message.encode("utf-8"))
+	cipherText, tag = encryptor.encrypt_and_digest(byteMessage)
 	return cipherText, tag, encryptor.nonce
 	
 def decrypt_message_AES(encrypted_msg, key, nonce, tag):
 	try:
 		decryptor = AES.new(key, AES.MODE_EAX, nonce)
 		decrypted_msg = decryptor.decrypt_and_verify(encrypted_msg, tag)
-		return decrypted_msg.decode("utf-8")
+		return decrypted_msg
 	except ValueError:
 		return None
 	return None
+
+def import_key_RSA(a_key, passPhrase):
+	return RSA.import_key(a_key, passphrase=passPhrase)
 
 
 # ########## Testing ##########
