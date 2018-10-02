@@ -30,7 +30,7 @@ except ImportError:
 #     host = socket.gethostbyname(socket.gethostname())
 
 # IPV6 address
-host = "fe80::68ca:9fc0:3f3f:8392%20"
+host = "fe80::9c12:7a6:f878:d5%8"
 port = 5995
 
 frame = None
@@ -213,9 +213,9 @@ serverHost.start()
 capImage = CaptureImage("ImageCapture")
 capImage.start()
 
-# Start detecting faces in those frame
-startedFaceDectection = False
-faceDect = FaceDetect("Face Detection")
+# # Start detecting faces in those frame
+# startedFaceDectection = False
+# faceDect = FaceDetect("Face Detection")
 
 # We can include something to allow changing the password on startup
 password = getpass.getpass("Please enter server password: ")
@@ -225,10 +225,10 @@ while True:
     try:
         if frame is not None:
 
-            # We'll only do face detection if we've started getting frames!
-            if not startedFaceDectection:
-                faceDect.start()
-                startedFaceDectection = True
+            # # We'll only do face detection if we've started getting frames!
+            # if not startedFaceDectection:
+            #     faceDect.start()
+            #     startedFaceDectection = True
 
             if faceRect is not None:
                 #Draw a rectangle around every found face
@@ -256,7 +256,7 @@ exitFlag = 1
 # main servers
 capImage.join()
 serverHost.join()
-faceDect.join()
+# faceDect.join()
 
 #frame servers
 for t in threads:

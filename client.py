@@ -15,6 +15,7 @@ serverFailed = 0
 debugFrame = None
 frameContours = None
 faceRect = None
+faceCount = 0
 
 # Crypto Stuff
 privateKey, publicKey = commonCrypto.generate_keys_RSA()
@@ -24,7 +25,7 @@ def main():
     global privateKey
     global assymetricKey
 
-    host = "fe80::68ca:9fc0:3f3f:8392%20"
+    host = "fe80::9c12:7a6:f878:d5%8"
     port = 5995
 
     password = getpass.getpass("Please enter password: ")
@@ -49,7 +50,6 @@ def main():
     #debug only!
     print(assymetricKey)
 
-
 class FrameReceiverClient(threading.Thread):
     '''Gets those frames being sent down'''
     def __init__(self, name):
@@ -63,7 +63,7 @@ class FrameReceiverClient(threading.Thread):
 
         recSocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 
-        serverHost = "fe80::68ca:9fc0:3f3f:8392%20"
+        serverHost = "fe80::9c12:7a6:f878:d5%8"
         serverPort = 5996
 
         print("Binding to address: ", serverHost)
@@ -110,13 +110,13 @@ class FrameReceiverClient(threading.Thread):
                     threadLock.acquire(1)
                     frame = tempFrame
                     threadLock.release()
+                except pickle.UnpicklingError:
+                    print("Failed unpickling")
+                    pass
                 except Exception as ex:
                     print(ex)
 
             except socket.timeout:
-                pass
-            except pickle.UnpicklingError:
-                print("Failed unpickling")
                 pass
             except Exception as ex:
                 print(ex)
@@ -184,6 +184,7 @@ class FaceDetect(threading.Thread):
         global frame
         global exitFlag
         global faceRect
+        global faceCount
         
         print("Starting face detection")
 
@@ -191,6 +192,12 @@ class FaceDetect(threading.Thread):
         while exitFlag == 0:
             if frame is not None:
                 faces, faceRect = self.DetectFaces(face_cascade, frame)
+
+                if faceRect is not None:
+                    # save them faces!
+                    for rect in faceRect:
+                        faceCount = faceCount + 1
+                        cv2.imwrite("./saved_faces/face" + str(faceCount) + ".png", frame[rect[1]:rect[1] + rect[2], rect[0] : rect[0] + rect[3]])
  
 
 main()
