@@ -25,7 +25,7 @@ def main():
     global privateKey
     global assymetricKey
 
-    host = "fe80::9c12:7a6:f878:d5%8"
+    host = "fe80::211c:dfe4:ba7f:4533%9"
     port = 5995
 
     password = getpass.getpass("Please enter password: ")
@@ -63,7 +63,7 @@ class FrameReceiverClient(threading.Thread):
 
         recSocket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 
-        serverHost = "fe80::9c12:7a6:f878:d5%8"
+        serverHost = "fe80::211c:dfe4:ba7f:4533%9"
         serverPort = 5996
 
         print("Binding to address: ", serverHost)
@@ -193,11 +193,12 @@ class FaceDetect(threading.Thread):
             if frame is not None:
                 faces, faceRect = self.DetectFaces(face_cascade, frame)
 
-                if faceRect is not None:
-                    # save them faces!
-                    for rect in faceRect:
-                        faceCount = faceCount + 1
-                        cv2.imwrite("./saved_faces/face" + str(faceCount) + ".png", frame[rect[1]:rect[1] + rect[2], rect[0] : rect[0] + rect[3]])
+                # Uncomment if you want to save people's faces to the saved_faces folder
+                # if faceRect is not None:
+                #     # save them faces!
+                #     for rect in faceRect:
+                #         faceCount = faceCount + 1
+                #         cv2.imwrite("./saved_faces/face" + str(faceCount) + ".png", frame[rect[1]:rect[1] + rect[2], rect[0] : rect[0] + rect[3]])
  
 
 main()

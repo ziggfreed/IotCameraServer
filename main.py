@@ -30,7 +30,7 @@ except ImportError:
 #     host = socket.gethostbyname(socket.gethostname())
 
 # IPV6 address
-host = "fe80::9c12:7a6:f878:d5%8"
+host = "fe80::211c:dfe4:ba7f:4533%9"
 port = 5995
 
 frame = None
